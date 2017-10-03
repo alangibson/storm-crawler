@@ -27,7 +27,7 @@ import java.util.Map;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.storm.task.OutputCollector;
-import org.apache.storm.topology.base.BaseRichBolt;
+import org.apache.storm.topology.IRichBolt;
 import org.apache.storm.tuple.Tuple;
 import org.junit.After;
 
@@ -36,10 +36,10 @@ import com.digitalpebble.stormcrawler.TestOutputCollector;
 import com.digitalpebble.stormcrawler.TestUtil;
 
 public class ParsingTester {
-    protected BaseRichBolt bolt;
+    protected IRichBolt bolt;
     protected TestOutputCollector output;
 
-    protected void setupParserBolt(BaseRichBolt bolt) {
+    protected void setupParserBolt(IRichBolt bolt) {
         this.bolt = bolt;
         output = new TestOutputCollector();
     }

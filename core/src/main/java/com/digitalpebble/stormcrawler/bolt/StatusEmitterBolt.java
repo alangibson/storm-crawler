@@ -17,50 +17,32 @@
 
 package com.digitalpebble.stormcrawler.bolt;
 
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Map;
 
 import org.apache.storm.task.OutputCollector;
 import org.apache.storm.task.TopologyContext;
+import org.apache.storm.topology.IComponent;
+import org.apache.storm.topology.IRichBolt;
 import org.apache.storm.topology.OutputFieldsDeclarer;
-import org.apache.storm.topology.base.BaseRichBolt;
 import org.apache.storm.tuple.Fields;
 import org.apache.storm.tuple.Tuple;
-import org.apache.storm.tuple.Values;
 
 import com.digitalpebble.stormcrawler.Metadata;
-import com.digitalpebble.stormcrawler.filtering.URLFilters;
-import com.digitalpebble.stormcrawler.parse.Outlink;
-import com.digitalpebble.stormcrawler.persistence.Status;
-import com.digitalpebble.stormcrawler.util.ConfUtils;
-import com.digitalpebble.stormcrawler.util.MetadataTransfer;
-import com.digitalpebble.stormcrawler.util.URLUtil;
+import com.digitalpebble.stormcrawler.StatusEmitterBase;
+import com.digitalpebble.stormcrawler.fetching.CallbackCollector;
+import com.digitalpebble.stormcrawler.fetching.TupleWrapper;
 
 /**
  * Provides common functionalities for Bolts which emit tuples to the status
  * stream, e.g. Fetchers, Parsers. Encapsulates the logic of URL filtering and
  * metadata transfer to outlinks.
  **/
-public abstract class StatusEmitterBolt extends BaseRichBolt {
-
-    private URLFilters urlFilters;
-
-    private MetadataTransfer metadataTransfer;
-
-    private boolean allowRedirs;
-
-    protected OutputCollector collector;
+public abstract class StatusEmitterBolt extends StatusEmitterBase implements IRichBolt, IComponent {
 
     @Override
-    public void prepare(Map stormConf, TopologyContext context,
-            OutputCollector collector) {
-        this.collector = collector;
-        urlFilters = URLFilters.fromConf(stormConf);
-        metadataTransfer = MetadataTransfer.getInstance(stormConf);
-        allowRedirs = ConfUtils.getBoolean(stormConf,
-                com.digitalpebble.stormcrawler.Constants.AllowRedirParamName,
-                true);
+    public void prepare(Map stormConf, TopologyContext context, OutputCollector collector) {
+    	super.prepare(stormConf, context, new CallbackCollector(collector));
     }
 
     @Override
@@ -70,52 +52,19 @@ public abstract class StatusEmitterBolt extends BaseRichBolt {
                 new Fields("url", "metadata", "status"));
     }
 
-    /** Used for redirections or when discovering sitemap URLs **/
-    protected void emitOutlink(Tuple t, URL sURL, String newUrl,
-            Metadata sourceMetadata, String... customKeyVals) {
+    @Override
+    public void cleanup() {
+    }   
+    
+    @Override
+    public Map<String, Object> getComponentConfiguration() {
+        return null;
+    }   
 
-        Outlink ol = filterOutlink(sURL, newUrl, sourceMetadata, customKeyVals);
-        if (ol == null)
-            return;
-
-        collector.emit(
-                com.digitalpebble.stormcrawler.Constants.StatusStreamName, t,
-                new Values(ol.getTargetURL(), ol.getMetadata(),
-                        Status.DISCOVERED));
-    }
-
-    protected Outlink filterOutlink(URL sURL, String newUrl,
-            Metadata sourceMetadata, String... customKeyVals) {
-        // build an absolute URL
-        try {
-            URL tmpURL = URLUtil.resolveURL(sURL, newUrl);
-            newUrl = tmpURL.toExternalForm();
-        } catch (MalformedURLException e) {
-            return null;
-        }
-
-        // apply URL filters
-        newUrl = this.urlFilters.filter(sURL, sourceMetadata, newUrl);
-
-        // filtered
-        if (newUrl == null) {
-            return null;
-        }
-
-        Metadata metadata = metadataTransfer.getMetaForOutlink(newUrl,
-                sURL.toExternalForm(), sourceMetadata);
-
-        for (int i = 0; i < customKeyVals.length; i = i + 2) {
-            metadata.addValue(customKeyVals[i], customKeyVals[i + 1]);
-        }
-
-        Outlink l = new Outlink(newUrl);
-        l.setMetadata(metadata);
-        return l;
-    }
-
-    protected boolean allowRedirs() {
-        return allowRedirs;
-    }
-
+    public void emitOutlink(Tuple input, URL url, String sitemapURL, 
+    		Metadata metadata, String... customKeyVals) {
+    	super.emitOutlink(new TupleWrapper(input), url, sitemapURL, metadata, 
+    			customKeyVals);
+	}
+    
 }

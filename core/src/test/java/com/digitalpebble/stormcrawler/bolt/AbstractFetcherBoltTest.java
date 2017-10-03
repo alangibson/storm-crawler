@@ -29,6 +29,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import org.apache.storm.task.OutputCollector;
+import org.apache.storm.topology.IRichBolt;
 import org.apache.storm.topology.base.BaseRichBolt;
 import org.apache.storm.tuple.Tuple;
 
@@ -38,7 +39,7 @@ import com.digitalpebble.stormcrawler.TestUtil;
 
 public abstract class AbstractFetcherBoltTest {
 
-    BaseRichBolt bolt;
+	IRichBolt bolt;
 
     @Test
     public void testDodgyURL() throws IOException {

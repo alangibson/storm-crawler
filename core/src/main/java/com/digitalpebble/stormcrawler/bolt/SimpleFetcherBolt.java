@@ -443,7 +443,7 @@ public class SimpleFetcherBolt extends StatusEmitterBolt {
         collector.ack(input);
     }
 
-    private String getPolitenessKey(URL u) {
+	private String getPolitenessKey(URL u) {
         String key;
         if (QUEUE_MODE_IP.equalsIgnoreCase(queueMode)) {
             try {
